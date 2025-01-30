@@ -1,0 +1,75 @@
+version: '3.7'
+
+services:
+  # Serviço para o RabbitMQ
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"  # Porta AMQP para comunicação com outros serviços
+      - "15672:15672"  # Porta HTTP para acessar a UI do RabbitMQ
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 30s
+      retries: 5
+      start_period: 10s
+      timeout: 10s
+    networks:
+      - backend
+
+  # Serviço para o PostgreSQL
+  postgres:
+    image: postgres:13
+    container_name: postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpassword
+      POSTGRES_DB: meubanco
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "admin"]
+      interval: 30s
+      retries: 5
+      start_period: 10s
+      timeout: 10s
+    networks:
+      - backend
+
+  # Serviço para a aplicação Java (Spring Boot)
+  app:
+    build: .  # Diretório onde está o Dockerfile da sua aplicação Java
+    container_name: java_app
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/meubanco
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: adminpassword
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USERNAME: user
+      RABBITMQ_PASSWORD: password
+    ports:
+      - "8089:8089"
+    networks:
+      - backend
+
+# Volumes persistentes para RabbitMQ e PostgreSQL
+volumes:
+  rabbitmq_data:
+  postgres_data:
+
+# Redes para comunicação entre os serviços
+networks:
+  backend:
+    driver: bridge
