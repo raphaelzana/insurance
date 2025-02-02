@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class MonthlyPremiumAmount {
+
     private double max_amount;
     private double min_amount;
     private double suggested_amount;

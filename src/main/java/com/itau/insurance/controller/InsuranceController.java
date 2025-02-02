@@ -1,31 +1,54 @@
 package com.itau.insurance.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.validation.annotation.Validated;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.itau.insurance.model.InsuranceQuoteRequest;
+import com.itau.insurance.model.InsuranceQuote;
 import com.itau.insurance.service.InsuranceService;
 
+import jakarta.validation.Valid;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.UUID;
+
+import com.itau.insurance.exception.ApiException;
 
 @RestController
+@RequestMapping("/api/v1/insurance")
 public class InsuranceController {
+
+    private static final Logger logger = LoggerFactory.getLogger(InsuranceController.class);
 
     @Autowired
     private InsuranceService insuranceService;
 
-    @RequestMapping
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    public void publish(@RequestBody @Validated InsuranceQuoteRequest body) throws Exception { 
+    @PostMapping("/quote")
+    public ResponseEntity<InsuranceQuote> publish(@RequestBody @Valid InsuranceQuote body) throws Exception { 
 
-        System.out.println("REQUEST: " + body.toString());
-
-        insuranceService.quoteInsurace(body);
+        String requestId = UUID.randomUUID().toString();
         
-    }
+        logger.info("REQUEST ID: {}, REQUEST: {}", requestId, body.toString());
 
+        try {
+            body = insuranceService.quoteInsurace(body);
+        } catch (IllegalArgumentException e) {
+            throw new ApiException(e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            logger.error("REQUEST ID: {}, Error processing insurance quote request", requestId, e);
+            throw new ApiException("Internal Server Error", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.add("Request-ID", requestId);
+
+        return new ResponseEntity<>(body, responseHeaders, HttpStatus.ACCEPTED);
+    }
 }

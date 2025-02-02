@@ -20,6 +20,10 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.routing.key}")
     private String routingKey;
 
+    @Value("${rabbitmq.consumer.routing.key}")
+    private String consumerRoutingKey;
+    
+
     // spring bean for rabbitmq queue
     @Bean
     public Queue queue(){
@@ -52,7 +56,7 @@ public class RabbitMQConfig {
             return BindingBuilder
                 .bind(consumerQueue())
                 .to(exchange())
-                .with(routingKey);
+                .with(consumerRoutingKey);
     }
 
 // Spring boot autoconfiguration provides following beans
