@@ -89,6 +89,29 @@ public class InsuranceService {
         }
     }
 
+    public InsuranceQuote findInsuranceQuote(Long id) throws Exception {
+
+        logger.info("Processing insurance quote finding by id: {}", id);
+
+        Quote quote = quoteRepository.findById(id).orElse(null);
+        logger.info("Quote: {}", quote);
+        
+        if (quote == null) {
+            logger.error("Quote not found.");
+            throw new IllegalArgumentException("Quote not found.");
+        }
+
+        InsuranceQuote insuranceQuote;
+        try {
+            insuranceQuote = objectMapper.readValue(quote.getJson_data(), InsuranceQuote.class);
+        } catch (JsonProcessingException e) {
+            logger.error("Error processing JSON data for quote ID: {}", id, e);
+            throw new RuntimeException("Error processing JSON data for quote ID: " + id, e);
+        }
+
+        return insuranceQuote;
+    }
+
     private Quote saveInsuranceQuote(InsuranceQuote insuranceQuote) throws JsonProcessingException {
         Quote quote = Quote.builder()
             .insurance_policy_id(insuranceQuote.getInsurance_policy_id())

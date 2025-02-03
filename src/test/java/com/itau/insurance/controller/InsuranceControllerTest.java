@@ -2,9 +2,11 @@ package com.itau.insurance.controller;
 
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.itau.insurance.model.InsuranceQuote;
@@ -21,7 +23,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(InsuranceController.class)
 public class InsuranceControllerTest {
-
     @Autowired
     private MockMvc mockMvc;
 
@@ -44,7 +45,7 @@ public class InsuranceControllerTest {
         InsuranceQuote request = new InsuranceQuote();
         // ...populate request with valid data...
 
-        mockMvc.perform(post("/insurance/quote")
+        mockMvc.perform(post("/api/v1/insurance/quote")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isAccepted());
@@ -59,7 +60,7 @@ public class InsuranceControllerTest {
 
         doThrow(new RuntimeException("Test Exception")).when(insuranceService).quoteInsurace(request);
 
-        mockMvc.perform(post("/insurance/quote")
+        mockMvc.perform(post("/api/v1/insurance/quote")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isInternalServerError());
@@ -72,10 +73,43 @@ public class InsuranceControllerTest {
 
         doThrow(new IllegalArgumentException("Invalid data")).when(insuranceService).quoteInsurace(request);
 
-        mockMvc.perform(post("/insurance/quote")
+        mockMvc.perform(post("/api/v1/insurance/quote")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(header().exists("Request-ID"));
     }
+
+    @Test
+    public void testFindQuote_Success() throws Exception {
+        InsuranceQuote response = new InsuranceQuote();
+        // ...populate response with valid data...
+
+        when(insuranceService.findInsuranceQuote(1L)).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/insurance/quote/1")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isAccepted())
+                .andExpect(header().exists("Request-ID"));
+    }
+
+    @Test
+    public void testFindQuote_InternalServerError() throws Exception {
+        doThrow(new RuntimeException("Test Exception")).when(insuranceService).findInsuranceQuote(1L);
+
+        mockMvc.perform(get("/api/v1/insurance/quote/1")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    public void testFindQuote_BadRequest() throws Exception {
+        doThrow(new IllegalArgumentException("Invalid ID")).when(insuranceService).findInsuranceQuote(1L);
+
+        mockMvc.perform(get("/api/v1/insurance/quote/1")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(header().exists("Request-ID"));
+    }
+
 }
