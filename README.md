@@ -89,14 +89,7 @@ As variáveis de ambiente são configuradas no `docker-compose.yml` e no `applic
   - `RABBITMQ_HOST`: rabbitmq
   - `RABBITMQ_USERNAME`: user
   - `RABBITMQ_PASSWORD`: password
-
-## Testes
-
-Para rodar os testes unitários, execute o comando:
-
-```bash
-mvn test
-```
+  
 
 Este comando irá executar os testes definidos no projeto, utilizando o JUnit e o Mockito para validar o comportamento das funcionalidades implementadas.
 
