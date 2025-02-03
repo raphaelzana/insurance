@@ -41,25 +41,20 @@ public class InsuranceService {
     private OfferApiConnector offerApiConnector;
 
     @Transactional
-    public InsuranceQuote quoteInsurace(InsuranceQuote body) throws Exception {
-
+    public InsuranceQuote quoteInsurance(InsuranceQuote body) throws Exception {
         logger.info("Processing insurance quote request: {}", body);
 
-        // Retrieves insurance data for a given product ID by calling the product API connector.
         Product productResponse = productApiConnector.getInsuranceDataByProductId(body.getProduct_id());
         logger.info("API PRODUCT RESPONSE: {}", productResponse);
-
         validateProductResponse(productResponse);
 
-        // Retrieves offer data for a given offer ID by calling the offer API connector.
         Offer offerResponse = offerApiConnector.getOfferDataByOfferId(body.getOffer_id());
         logger.info("API OFFER RESPONSE: {}", offerResponse);
-
         validateOfferResponse(body, offerResponse);
 
         Quote quote = saveInsuranceQuote(body);
         logger.info("Quote saved: {}", quote);
-        
+
         body.setId(quote.getId());
         producer.sendMessage(objectMapper.writeValueAsString(body));
 
@@ -67,10 +62,14 @@ public class InsuranceService {
     }
 
     public void updateInsuranceQuote(String message) throws Exception {
-
         logger.info("Processing insurance quote update request: {}", message);
         InsuranceQuote insuranceQuote = objectMapper.readValue(message, InsuranceQuote.class);
         logger.info("Insurance quote: {}", insuranceQuote);
+
+        if (quoteRepository.findById(insuranceQuote.getId()).isEmpty()) {
+            logger.info("Insurance ID {} not found.", insuranceQuote.getId());
+            throw new IllegalArgumentException("Insurance ID " + insuranceQuote.getId() + " not found.");
+        }
 
         Quote quote = Quote.builder()
             .id(insuranceQuote.getId())
@@ -80,36 +79,26 @@ public class InsuranceService {
             .updated_at(insuranceQuote.getUpdated_at())
             .build();
 
-        if (quoteRepository.findById(insuranceQuote.getId()).isEmpty()){
-            logger.info("Insurance ID " + insuranceQuote.getId() + " not found.");
-            throw new RuntimeException("Insurance ID " + insuranceQuote.getId() + " not found.");
-        } else {
-            logger.info("Updating quote: " + quote);
-            quoteRepository.save(quote);
-        }
+        logger.info("Updating quote: {}", quote);
+        quoteRepository.save(quote);
     }
 
     public InsuranceQuote findInsuranceQuote(Long id) throws Exception {
-
         logger.info("Processing insurance quote finding by id: {}", id);
 
-        Quote quote = quoteRepository.findById(id).orElse(null);
-        logger.info("Quote: {}", quote);
-        
-        if (quote == null) {
+        Quote quote = quoteRepository.findById(id).orElseThrow(() -> {
             logger.error("Quote not found.");
-            throw new IllegalArgumentException("Quote not found.");
-        }
+            return new IllegalArgumentException("Quote not found.");
+        });
 
-        InsuranceQuote insuranceQuote;
+        logger.info("Quote: {}", quote);
+
         try {
-            insuranceQuote = objectMapper.readValue(quote.getJson_data(), InsuranceQuote.class);
+            return objectMapper.readValue(quote.getJson_data(), InsuranceQuote.class);
         } catch (JsonProcessingException e) {
             logger.error("Error processing JSON data for quote ID: {}", id, e);
             throw new RuntimeException("Error processing JSON data for quote ID: " + id, e);
         }
-
-        return insuranceQuote;
     }
 
     private Quote saveInsuranceQuote(InsuranceQuote insuranceQuote) throws JsonProcessingException {
@@ -121,7 +110,7 @@ public class InsuranceService {
     }
 
     private void validateProductResponse(Product productResponse) {
-        logger.info("Validating product response.", productResponse);
+        logger.info("Validating product response: {}", productResponse);
         if (productResponse == null) {
             logger.error("Product not found.");
             throw new IllegalArgumentException("Product not found.");
@@ -132,7 +121,7 @@ public class InsuranceService {
     }
 
     private void validateOfferResponse(InsuranceQuote body, Offer offerResponse) {
-        logger.info("Validating offer response.", offerResponse);
+        logger.info("Validating offer response: {}", offerResponse);
         if (offerResponse == null) {
             logger.error("Offer not found.");
             throw new IllegalArgumentException("Offer not found.");
@@ -158,11 +147,9 @@ public class InsuranceService {
     }
 
     private boolean areAllCoveragesFromQuotePresentInOffer(Map<String, Double> quoteCoverages, Map<String, Double> offerCoverages) {
-       
         for (Map.Entry<String, Double> entry : quoteCoverages.entrySet()) {
-            String key = entry.getKey();
-            if (!offerCoverages.containsKey(key)) {
-                logger.warn("Element {} not found in quoteCoverages", entry);
+            if (!offerCoverages.containsKey(entry.getKey())) {
+                logger.warn("Element {} not found in offer coverages", entry);
                 return false;
             }
         }
@@ -170,16 +157,13 @@ public class InsuranceService {
     }
 
     private Double sumCoverageValues(Map<String, Double> coverages) {
-        return coverages.entrySet()
-                .stream()
-                .mapToDouble(Map.Entry::getValue)
-                .sum();
+        return coverages.values().stream().mapToDouble(Double::doubleValue).sum();
     }
 
     private boolean areAllAssistancesFromQuotePresentInOffer(List<String> quoteAssistances, List<String> offerAssistances) {
         for (String assistance : quoteAssistances) {
             if (!offerAssistances.contains(assistance)) {
-                logger.warn("Element {} not found in quoteAssistances", assistance);
+                logger.warn("Element {} not found in offer assistances", assistance);
                 return false;
             }
         }

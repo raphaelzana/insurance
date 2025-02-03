@@ -50,7 +50,7 @@ public class InsuranceControllerTest {
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isAccepted());
 
-        verify(insuranceService).quoteInsurace(request);
+        verify(insuranceService).quoteInsurance(request);
     }
 
     @Test
@@ -58,7 +58,7 @@ public class InsuranceControllerTest {
         InsuranceQuote request = new InsuranceQuote();
         // ...populate request with valid data...
 
-        doThrow(new RuntimeException("Test Exception")).when(insuranceService).quoteInsurace(request);
+        doThrow(new RuntimeException("Test Exception")).when(insuranceService).quoteInsurance(request);
 
         mockMvc.perform(post("/api/v1/insurance/quote")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -71,7 +71,7 @@ public class InsuranceControllerTest {
         InsuranceQuote request = new InsuranceQuote();
         // ...populate request with invalid data...
 
-        doThrow(new IllegalArgumentException("Invalid data")).when(insuranceService).quoteInsurace(request);
+        doThrow(new IllegalArgumentException("Invalid data")).when(insuranceService).quoteInsurance(request);
 
         mockMvc.perform(post("/api/v1/insurance/quote")
                 .contentType(MediaType.APPLICATION_JSON)

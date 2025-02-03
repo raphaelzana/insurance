@@ -41,7 +41,7 @@ public class InsuranceController {
         logger.info("REQUEST ID: {}, REQUEST: {}", requestId, body.toString());
 
         try {
-            body = insuranceService.quoteInsurace(body);
+            body = insuranceService.quoteInsurance(body);
         } catch (IllegalArgumentException e) {
             throw new ApiException(e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
